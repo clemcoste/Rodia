@@ -57,13 +57,13 @@ static uint16_t store = 0;
 long tempo;
 boolean trigger_station_changed = false;
 boolean trigger_tempo = false;
-int saved_station;
+int station;
 
 TEA5767 radio;    // Create an instance of Class for TEA5767
 
 
-  int EEPROM_station = EEPROM.read(0);
-  int EEPROM_station_freq = 0;
+int EEPROM_station = EEPROM.read(0);
+int EEPROM_station_freq = 0;
 
 /// Setup a FM only radio configuration
 /// with some debugging on the Serial port
@@ -91,81 +91,114 @@ void setup() {
   // Enable information to the Serial port
   radio.debugEnable();
 
-  
+
   // HERE: adjust the frequency to a local sender
   // radio.setBandFrequency(FIX_BAND, 10310); // RMC
   radio.setVolume(volume);
-  radio.setMono(true);
+  //radio.setMono(true);
 
   Serial.print("EEPROM_station...");
   Serial.println(EEPROM_station);
-  EEPROM_station_freq = (EEPROM_station + 875);
-  EEPROM_station_freq = EEPROM_station_freq *10;
+  EEPROM_station_freq = Num2Freq(EEPROM_station);
   Serial.print("EEPROM_station_freq...");
   Serial.println(EEPROM_station_freq);
   radio.setBandFrequency(FIX_BAND, EEPROM_station_freq);
 
   tempo = millis();
-  
+
 } // setup
 
 
 /// show the current chip data every 3 seconds.
 void loop() {
-  
+
   // Rotary Encoder
   static int8_t c, val;
   if ( val = read_rotary() ) {
-    freq += val*10;
+    if (freq == 10790 and val == int8_t(1))
+    {
+      freq = 8760;
+      station = Freq2Num(freq);
+    }
+    else if (freq == 8760 and val == int8_t(-1))
+    {
+      freq = 10790;
+      station = Freq2Num(freq);
+    }
+    else
+    { freq += val * 10;
+    station = Freq2Num(freq);
+    }
     radio.setBandFrequency(FIX_BAND, freq);
-    Serial.println(freq);
+    //Serial.println(freq);
     trigger_station_changed = true;
   }
 
-if (digitalRead(BUTTON)==0) {
+  if (digitalRead(BUTTON) == 0) {
 
-      delay(10);
-      if (digitalRead(BUTTON)==0) {
-          Serial.println("MODE CHANGED");
-          while(digitalRead(BUTTON)==0);
-      }
-   }
+    delay(10);
+    if (digitalRead(BUTTON) == 0) {
+      Serial.println("MODE CHANGED");
+      while (digitalRead(BUTTON) == 0);
+    }
+  }
 
-   if ((millis() - tempo) > 3000)
-   {trigger_tempo = true;}
+  if ((millis() - tempo) > 3000)
+  {
+    trigger_tempo = true;
+  }
 
-   // EEPROM WRITE
-   if(trigger_tempo && trigger_station_changed)
-        {
-            saved_station = freq/10;
-            saved_station = saved_station - 875;
-            
-            EEPROM.write(0, saved_station);
-            Serial.print("New frequence saved :");
-            Serial.print(" EEPROM = ");
-            Serial.print(saved_station);
-            Serial.print(" - FREQ = ");
-            Serial.println(freq);
-            tempo = millis(); // on stocke la nouvelle heure
-            trigger_tempo = false;
-            trigger_station_changed = false;
-            
-        }
-  
-//
-//  char s[12];
-//  radio.formatFrequency(s, sizeof(s));
-//  Serial.print("Station:");
-//  Serial.println(s);
-//
-//  Serial.print("Radio:");
-//  radio.debugRadioInfo();
-//
-//  Serial.print("Audio:");
-//  radio.debugAudioInfo();
+  // EEPROM WRITE
+  if (trigger_tempo && trigger_station_changed)
+  {
+    EEPROM.write(0, station);
+    Serial.print("New frequence saved :");
+    Serial.print(" EEPROM = ");
+    Serial.print(station);
+    Serial.print(" - FREQ = ");
+    Serial.println(freq);
+    tempo = millis(); // on stocke la nouvelle heure
+    trigger_tempo = false;
+    trigger_station_changed = false;
+
+  }
+
+  //
+  //  char s[12];
+  //  radio.formatFrequency(s, sizeof(s));
+  //  Serial.print("Station:");
+  //  Serial.println(s);
+  //
+  //  Serial.print("Radio:");
+  //  radio.debugRadioInfo();
+  //
+  //  Serial.print("Audio:");
+  //  radio.debugAudioInfo();
 
   //delay(1000);
 } // loop
+
+byte Freq2Num(int frequency)
+{
+  int result_num;
+
+  result_num = frequency / 10;
+  result_num = result_num - 875;
+  return byte(result_num);
+}
+
+int Num2Freq(byte num)
+{
+  int result_freq;
+  int temp;
+  temp = int(num);
+  temp = temp + 875;
+  result_freq = temp * 10;
+  result_freq = byte(result_freq);
+  return result_freq;
+}
+
+
 
 // A vald CW or  CCW move returns 1, invalid returns 0.
 int8_t read_rotary() {
