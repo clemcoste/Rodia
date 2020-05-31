@@ -58,6 +58,8 @@ long tempo;
 boolean trigger_station_changed = false;
 boolean trigger_tempo = false;
 int station;
+boolean mode_Auto_ON = false;
+boolean push_button_triggered = false;
 
 TEA5767 radio;    // Create an instance of Class for TEA5767
 
@@ -127,20 +129,36 @@ void loop() {
     }
     else
     { freq += val * 10;
-    station = Freq2Num(freq);
+      station = Freq2Num(freq);
     }
     radio.setBandFrequency(FIX_BAND, freq);
     //Serial.println(freq);
     trigger_station_changed = true;
   }
 
-  if (digitalRead(BUTTON) == 0) {
-
+  if (digitalRead(BUTTON) == LOW)
+  {
     delay(10);
-    if (digitalRead(BUTTON) == 0) {
-      Serial.println("MODE CHANGED");
-      while (digitalRead(BUTTON) == 0);
+    if (digitalRead(BUTTON) == LOW)
+    {
+      push_button_triggered = true;
+      while (digitalRead(BUTTON) == LOW) {}
     }
+  }
+
+  if (push_button_triggered)
+  {
+    if (mode_Auto_ON)
+    {
+      mode_Auto_ON = false;
+    }
+    else
+    {
+      mode_Auto_ON = true;
+    }
+    Serial.print("MODE CHANGED : Auto =");
+    Serial.println(mode_Auto_ON);
+    push_button_triggered = false;
   }
 
   if ((millis() - tempo) > 3000)
